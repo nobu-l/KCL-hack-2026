@@ -1,0 +1,23 @@
+@import "tailwindcss";
+.night-sky {
+  position: relative;
+  min-height: 100vh;
+  background: linear-gradient(to bottom, #020024, #0a0a3c, #1b1b4d);
+  overflow: hidden;
+}
+
+.star {
+  position: absolute;
+  border-radius: 50%;
+  background: white;
+  animation: twinkle 3s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
+}
