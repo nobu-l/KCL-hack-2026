@@ -20,7 +20,7 @@ export default function Navbar({
   unreadCount,
   finishedCount,
 }: NavbarProps) {
-  // タブの定義一覧（配列にして map で回すことでコードをスッキリ保ちます）
+  // タブの定義一覧
   const tabs: { id: AppTab; label: string; icon: string; badge?: number }[] = [
     {
       id: "tower",
@@ -47,13 +47,10 @@ export default function Navbar({
   ];
 
   return (
-    <header className="sticky top-0 z-30 bg-stone-900/95 backdrop-blur-md border-b border-stone-800 text-stone-100">
+    <header className="sticky top-0 z-30 bg-[rgb(108,53,36)] backdrop-blur-md border-b border-stone-800 text-stone-100">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         {/* 左側: アプリロゴ & タイトル */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-xl shadow-inner">
-            📚
-          </div>
           <div>
             <h1 className="text-lg font-bold tracking-tight text-stone-100 flex items-center gap-2">
               積読コンシェルジュ
@@ -64,30 +61,30 @@ export default function Navbar({
           </div>
         </div>
 
-        {/* 中央: タブナビゲーション */}
-        <nav className="flex items-center gap-1 bg-stone-800/80 p-1 rounded-xl border border-stone-700/60 overflow-x-auto">
+        {/* 中央: タブナビゲーション（フラット・下線デザインに変更） */}
+        <nav className="flex items-stretch h-16 overflow-x-auto">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
-                className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                className={`relative flex items-center gap-1.5 px-3 sm:px-4 h-full text-sm transition-colors whitespace-nowrap border-b-2 ${
                   isActive
-                    ? "bg-amber-600 text-white shadow-sm font-semibold"
-                    : "text-stone-300 hover:text-stone-100 hover:bg-stone-700/50"
+                    ? "border-amber-500 text-amber-400 font-bold"
+                    : "border-transparent text-stone-400 font-medium hover:text-stone-200 hover:border-stone-600"
                 }`}
               >
                 <span>{tab.icon}</span>
                 <span>{tab.label}</span>
 
-                {/* 冊数バッジ（積読数・本棚数がある場合） */}
+                {/* 冊数バッジ */}
                 {tab.badge !== undefined && tab.badge > 0 && (
                   <span
-                    className={`ml-1 text-[11px] px-1.5 py-0.2 rounded-full font-bold leading-tight ${
+                    className={`ml-1 text-[11px] px-1.5 py-0.5 rounded-full font-bold leading-tight ${
                       isActive
-                        ? "bg-stone-900/70 text-amber-200"
-                        : "bg-stone-700 text-stone-300"
+                        ? "bg-amber-500/20 text-amber-400"
+                        : "bg-stone-800 text-stone-400"
                     }`}
                   >
                     {tab.badge}
@@ -105,7 +102,7 @@ export default function Navbar({
             className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold px-3.5 py-2 rounded-xl text-sm transition-all transform active:scale-95 shadow-md shadow-amber-500/10 cursor-pointer"
           >
             <span className="text-base leading-none">＋</span>
-            <span className="hidden sm:inline">本を登録</span>
+            <span className="hidden sm:inline">本を追加</span>
           </button>
         </div>
       </div>
