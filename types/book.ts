@@ -1,5 +1,5 @@
 /**
- * 積読コンシェルジュ（Tsundoku Concierge）の型定義
+ * 型定義
  * 
  * TypeScriptの型（Type）を定義することで、データの構造（どんなキーや型を持つか）を明確にし、
  * タイポや予期せぬバグを防ぎます。
@@ -15,6 +15,7 @@ export type MoodTag =
   | "モチベUP"
   | "知的好奇心"
   | "気分転換"
+  | "感動・泣ける"
   | "教養・スキルアップ";
 
 // 本のジャンル・カテゴリ
@@ -44,6 +45,13 @@ export type SpineColor =
   | "stone"
   | "teal";
 
+// 本の評価（１～５）
+export type BookRating = 1 | 2 | 3 | 4 | 5;
+
+// ユーザーがフォームで入力する本の情報（登録時に使用する型）
+// id, status, addedAt はアプリ側が自動で決めるので、フォームでは扱わない
+export type NewBookInput = Omit<Book, "id" | "status" | "addedAt" | "spineColor">;
+
 /**
  * 本のデータモデル
  */
@@ -69,9 +77,9 @@ export interface ReadingLog {
   bookTitle: string;           // 本のタイトル
   bookAuthor: string;          // 著者名
   categories: BookCategory[];  // カテゴリ（複数選択）
-  moodTags: MoodTag[];         // 気分タグ
+  moodTags: MoodTag[];         // 気分タグ(複数選択)
   finishedAt: string;          // 読了日（例: "2026-08-16"）
-  rating: number;              // 星評価（1〜5）
+  rating: BookRating;          // 星評価（1〜5）
   impressions: string;         // 一言感想・学んだこと
 }
 
