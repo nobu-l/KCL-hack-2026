@@ -35,6 +35,10 @@ export type BookCategory =
   | "デザイン・アート"
   | "その他";
 
+  export type bookstatus =
+  | "latest"
+  | "new"
+
 // 本の背表紙カラー（バーチャル本棚で並べる際の色）
 export type SpineColor =
   | "amber"

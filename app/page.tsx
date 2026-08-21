@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import { AppTab, Book } from "@/types/book";
 import { INITIAL_BOOKS } from "@/lib/mockData";
 import BookCard from "@/components/book_card";
+import SearchBar from "@/components/SearchBar";
 
 export default function Home() {
   // 1. 本のデータ一覧を state で管理
@@ -23,6 +24,9 @@ export default function Home() {
   const handleOpenAddModal = () => {
     alert("本を追加するモーダルは次のステップで実装します！");
   };
+
+  // ５　検索バーの入力値を state で管理
+  const [searchQuery, setSearchQuery] = useState("");
 
   return (
     <div className="min-h-screen bg-stone-100 flex flex-col">
@@ -51,15 +55,16 @@ export default function Home() {
                 積読中: {unreadCount} 冊
               </span>
             </div>
-
             {/* 本の一覧カード表示 */}
             <div className="space-y-3">
               {books
                 .filter((b) => b.status !== "finished")
+                .filter((b) =>b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||b.author.toLowerCase().includes(searchQuery.toLowerCase()))
                 .map((book) => (
                   <BookCard key={book.id} book={book}/>
                   ))}
             </div>
+           
           </div>
         )}
 
