@@ -13,6 +13,7 @@ interface BookCardProps {
 export default function BookCard({ book, ageRatio, onStatusChange, onFinish }: BookCardProps) {
   return (
     <div
+      suppressHydrationWarning // ← これを追加
       className="book-stack-row group relative"
       style={{ "--book-age": ageRatio } as React.CSSProperties}
     >

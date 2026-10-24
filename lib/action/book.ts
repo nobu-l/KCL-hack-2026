@@ -1,7 +1,9 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { BookRating, BookStatus } from "@/types/book";
+import { SPINE_COLORS, type BookRating, type BookStatus, type SpineColor } from "@/types/book";
+
+const randomSpineColor = (): SpineColor => SPINE_COLORS[Math.floor(Math.random() * SPINE_COLORS.length)];
 
 export async function addBook(input: {
   title: string;
@@ -10,7 +12,7 @@ export async function addBook(input: {
   moodTags: string[];
   pages?: number;
   reason?: string;
-  spineColor?: string;
+  spineColor?: SpineColor;
   status: BookStatus;
 }) {
   const supabase = await createClient();
@@ -21,7 +23,7 @@ export async function addBook(input: {
     mood_tags: input.moodTags,
     pages: input.pages,
     reason: input.reason,
-    spine_color: input.spineColor ?? "stone",
+    spine_color: input.spineColor ?? randomSpineColor(),
     status: input.status,
   });
   if (error) throw error;

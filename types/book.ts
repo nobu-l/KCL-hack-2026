@@ -40,14 +40,8 @@ export type BookCategory =
   | "new"
 
 // 本の背表紙カラー（バーチャル本棚で並べる際の色）
-export type SpineColor =
-  | "amber"
-  | "emerald"
-  | "sky"
-  | "rose"
-  | "indigo"
-  | "stone"
-  | "teal";
+export const SPINE_COLORS = ["amber", "emerald", "sky", "rose", "indigo", "stone", "teal"] as const;
+export type SpineColor = (typeof SPINE_COLORS)[number];
 
 // 本の評価（１～５）
 export type BookRating = 1 | 2 | 3 | 4 | 5;
