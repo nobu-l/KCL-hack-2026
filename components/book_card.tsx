@@ -5,37 +5,33 @@ import { Book } from "@/types/book";
 
 interface BookCardProps {
   book: Book;
+  ageRatio: number;
+  onStatusChange: (status: "unread" | "reading") => void;
+  onFinish: () => void;
 }
 
-export default function BookCard({ book }: BookCardProps) {
+export default function BookCard({ book, ageRatio, onStatusChange, onFinish }: BookCardProps) {
   return (
-    <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-stone-200 flex justify-between items-center hover:border-stone-300 transition-all">
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-stone-100 text-stone-700">
-            {book.categories.join(", ")}
-          </span>
-          {book.status === "reading" && (
-            <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-800">
-              読書中
-            </span>
-          )}
-        </div>
-        <h3 className="text-base sm:text-lg font-bold text-stone-900">
-          {book.title}
-        </h3>
-        <p className="text-sm text-stone-500">著者: {book.author}</p>
-      </div>
+    <div
+      className="book-stack-row group relative"
+      style={{ "--book-age": ageRatio } as React.CSSProperties}
+    >
+      <button type="button" onClick={onFinish} aria-label={`${book.title}を読了にする`} className="book-stack w-full text-left">
+        <span className="book-stack__layer book-stack__layer--back" aria-hidden="true" />
+        <span className="book-stack__layer book-stack__layer--middle" aria-hidden="true" />
+        <span className={`book-stack__cover book-stack__cover--${book.spineColor ?? "stone"}`}>
+          <span className="book-stack__cover-mark" aria-hidden="true" />
+          <span className="book-stack__title">{book.title}</span>
+          <span className="book-stack__author">{book.author}</span>
+          <span className="book-stack__category">{book.categories[0]}</span>
+        </span>
+      </button>
 
-      <span
-        className={`text-xs px-3 py-1 rounded-full font-medium ${
-          book.status === "reading"
-            ? "bg-blue-50 text-blue-700 border border-blue-200"
-            : "bg-amber-50 text-amber-700 border border-amber-200"
-        }`}
-      >
-        {book.status === "reading" ? "読書中" : "積読中"}
-      </span>
+      <div className="absolute right-8 top-1/2 z-10 -translate-y-1/2 font-sans">
+        <button type="button" onClick={() => onStatusChange(book.status === "reading" ? "unread" : "reading")} className={`rounded-full px-3 py-1.5 text-xs font-medium ${book.status === "reading" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>
+          {book.status === "reading" ? "読書中" : "積読中"}
+        </button>
+      </div>
     </div>
   );
 }

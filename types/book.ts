@@ -111,4 +111,4 @@ export interface AiRecommendation {
 /**
  * アプリのメイン画面タブ切り替え型
  */
-export type AppTab = "tower" | "shelf" | "logs" | "ai";
+export type AppTab = "tower" | "shelf" | "quick" | "ai" | "stats";

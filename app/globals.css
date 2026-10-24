@@ -21,3 +21,115 @@
     opacity: 1;
   }
 }
+
+.book-stack {
+  position: relative;
+  display: block;
+  min-height: 126px;
+  isolation: isolate;
+}
+
+.book-stack-row {
+  z-index: calc(20 - round(var(--book-age) * 10));
+  margin-top: -28px;
+  filter: saturate(calc(1 - var(--book-age) * 0.65)) opacity(calc(1 - var(--book-age) * 0.18));
+  transform: scale(calc(1 - var(--book-age) * 0.16));
+  transform-origin: center bottom;
+  transition: filter 180ms ease, transform 180ms ease;
+}
+
+.book-stack-row:first-child {
+  margin-top: 0;
+}
+
+.book-stack-row:hover {
+  z-index: 30;
+  filter: saturate(1) opacity(1);
+  transform: scale(1);
+}
+
+.book-stack-row:nth-child(3n) {
+  transform: rotate(-1.2deg) scale(calc(1 - var(--book-age) * 0.16));
+}
+
+.book-stack-row:nth-child(3n + 2) {
+  transform: rotate(0.9deg) scale(calc(1 - var(--book-age) * 0.16));
+}
+
+.book-stack__layer,
+.book-stack__cover {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  width: 100%;
+  min-height: 116px;
+  border-radius: 6px 24px 24px 6px;
+}
+
+.book-stack__layer {
+  background: repeating-linear-gradient(0deg, #d6c4a9 0, #d6c4a9 3px, #bba688 4px, #eadcc6 5px);
+  box-shadow: 0 3px 0 #9b8365, 0 8px 12px rgb(76 56 35 / 12%);
+}
+
+.book-stack__layer--back {
+  transform: translate(12px, 12px) rotate(1.5deg);
+}
+
+.book-stack__layer--middle {
+  transform: translate(6px, 6px) rotate(-1deg);
+}
+
+.book-stack__cover {
+  z-index: 1;
+  overflow: hidden;
+  padding: 20px 150px 18px 48px;
+  color: #fffaf0;
+  box-shadow: inset -8px 0 rgb(0 0 0 / 12%), inset 8px 0 rgb(255 255 255 / 12%), 0 5px 8px rgb(76 56 35 / 22%);
+  transform: perspective(500px) rotateX(2deg);
+  transition: transform 180ms ease;
+}
+
+.book-stack-row:hover .book-stack__cover {
+  transform: perspective(500px) rotateX(2deg) translateY(-3px) rotate(-0.5deg);
+}
+
+.book-stack__cover--amber { background: linear-gradient(135deg, #bd7b27, #87511f); }
+.book-stack__cover--emerald { background: linear-gradient(135deg, #34745b, #194b3d); }
+.book-stack__cover--sky { background: linear-gradient(135deg, #3d7fa0, #28526c); }
+.book-stack__cover--rose { background: linear-gradient(135deg, #a95859, #713437); }
+.book-stack__cover--indigo { background: linear-gradient(135deg, #5b5b91, #36365e); }
+.book-stack__cover--stone { background: linear-gradient(135deg, #817666, #514941); }
+.book-stack__cover--teal { background: linear-gradient(135deg, #3e8984, #245854); }
+
+.book-stack__cover-mark {
+  position: absolute;
+  left: 12px;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  border-radius: 999px;
+  background: rgb(255 250 240 / 45%);
+}
+
+.book-stack__title,
+.book-stack__author,
+.book-stack__category {
+  position: relative;
+  display: block;
+  max-width: 88%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.book-stack__title { font-size: 1.05rem; font-weight: 800; letter-spacing: 0.02em; }
+.book-stack__author { margin-top: 7px; font-size: 0.8rem; opacity: 0.85; }
+.book-stack__category { margin-top: 12px; font-size: 0.68rem; opacity: 0.72; }
+
+@media (max-width: 640px) {
+  .book-stack__cover { padding-right: 112px; }
+  .book-stack-row > div { right: 20px; }
+  .book-stack__title { font-size: 0.92rem; }
+  .book-stack__author { font-size: 0.72rem; }
+}
