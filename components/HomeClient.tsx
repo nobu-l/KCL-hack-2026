@@ -105,47 +105,54 @@ export default function HomeClient({ initialBooks, initialLogs }: HomeClientProp
     window.location.reload();
   };
 
-  const createMockRecommendation = (request: string): Recommendation | null => {
-    if (request.includes("見つからない") || request.includes("条件なし")) return null;
-    const existingBook = books.find((book) => book.status !== "finished");
-    return {
-      title: existingBook?.title ?? "夜と霧",
-      author: existingBook?.author ?? "ヴィクトール・E・フランクル",
-      reason: "今の気分に寄り添い、無理なく読み進められる一冊です。",
-      imageUrl: "/book-cover-placeholder.svg",
-      category: existingBook?.categories[0] ?? "文学",
-    };
-  };
-
   const handleChatSubmit = async () => {
     const request = chatInput.trim();
     if (!request || isChatting) return;
 
+    const chatId = activeChatId;
     setChatInput("");
     setChatError(null);
     setIsChatting(true);
     setAgentExpression("/tundog/dog_thinking.svg");
-    setChatSessions((sessions) => sessions.map((session) => session.id === activeChatId
+    setChatSessions((sessions) => sessions.map((session) => session.id === chatId
       ? { ...session, title: session.title === "新しい読書相談" ? request.slice(0, 28) : session.title, recommendation: null, messages: [...session.messages, { id: Date.now(), role: "user", text: request }] }
       : session));
 
-    await new Promise((resolve) => window.setTimeout(resolve, 650));
-    const nextRecommendation = createMockRecommendation(request);
-    setChatSessions((sessions) => sessions.map((session) => session.id === activeChatId
-      ? {
-        ...session,
-        recommendation: nextRecommendation,
-        messages: [...session.messages, {
-          id: Date.now() + 1,
-          role: "assistant",
-          text: nextRecommendation
-            ? "見つけました。こちらの一冊はいかがですか？"
-            : "条件に合う本が見つかりませんでした。気分やジャンルを少し変えて、もう一度教えてください。",
-        }],
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: request }),
+      });
+      const result: { reply?: string; error?: string; recommendation?: Recommendation | null } = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error ?? "AI選書の処理に失敗しました。");
       }
-      : session));
-    setAgentExpression(pickExpression());
-    setIsChatting(false);
+
+      if (!result.reply?.trim()) {
+        throw new Error("AIから有効な返答を受け取れませんでした。");
+      }
+
+      setChatSessions((sessions) => sessions.map((session) => session.id === chatId
+        ? {
+          ...session,
+          recommendation: result.recommendation ?? null,
+          messages: [...session.messages, {
+            id: Date.now(),
+            role: "assistant",
+            text: result.reply as string,
+          }],
+        }
+        : session));
+      setAgentExpression(pickExpression());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "AI選書の処理に失敗しました。";
+      setChatError(message);
+      setAgentExpression("/tundog/dog_worried.svg");
+    } finally {
+      setIsChatting(false);
+    }
   };
 
   const addRecommendationToTower = async () => {
