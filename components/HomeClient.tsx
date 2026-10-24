@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import { AppTab, Book, BookRating, NewBookInput, ReadingLog } from "@/types/book";
@@ -17,6 +18,38 @@ interface HomeClientProps {
   initialLogs: ReadingLog[];
 }
 
+type ChatMessage = {
+  id: number;
+  role: "user" | "assistant";
+  text: string;
+};
+
+type ChatSession = {
+  id: number;
+  title: string;
+  messages: ChatMessage[];
+  recommendation: Recommendation | null;
+};
+
+type Recommendation = {
+  title: string;
+  author: string;
+  reason: string;
+  imageUrl: string;
+  category: Book["categories"][number];
+};
+
+const agentExpressions = [
+  "/tundog/dog_normal.svg",
+  "/tundog/dog_thinking.svg",
+  "/tundog/dog_worried.svg",
+  "/tundog/dog_smile.svg",
+  "/tundog/dog_sleepy.svg",
+  "/tundog/dog_surprised.svg",
+];
+
+const pickExpression = () => agentExpressions[Math.floor(Math.random() * agentExpressions.length)];
+
 export default function HomeClient({ initialBooks, initialLogs }: HomeClientProps) {
   // 1. 本のデータ一覧を state で管理
   const [books, setBooks] = useState<Book[]>(initialBooks);
@@ -27,10 +60,27 @@ export default function HomeClient({ initialBooks, initialLogs }: HomeClientProp
   const [selectedShelfBook, setSelectedShelfBook] = useState<Book | null>(null);
   const [startedBook, setStartedBook] = useState<Book | null>(null);
   const [recommendedBook, setRecommendedBook] = useState<Book | null>(null);
+  const [wishlist, setWishlist] = useState<Recommendation[]>([]);
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([
+    {
+      id: 1,
+      title: "新しい読書相談",
+      messages: [{ id: 1, role: "assistant", text: "こんにちは。今日はどんな本を探していますか？気分や読書に使える時間を教えてください。" }],
+      recommendation: null,
+    },
+  ]);
+  const [activeChatId, setActiveChatId] = useState(1);
+  const [chatInput, setChatInput] = useState("");
+  const [isChatting, setIsChatting] = useState(false);
+  const [agentExpression, setAgentExpression] = useState(agentExpressions[0]);
+  const [chatError, setChatError] = useState<string | null>(null);
   const [now] = useState(() => Date.now());
 
   // 2. 現在選択されているタブ（"tower" | "shelf" | "logs" | "ai"）を state で管理
   const [activeTab, setActiveTab] = useState<AppTab>("tower");
+  const activeChat = chatSessions.find((session) => session.id === activeChatId) ?? chatSessions[0];
+  const chatMessages = activeChat?.messages ?? [];
+  const recommendation = activeChat?.recommendation ?? null;
 
   // 3. Navbar のバッジ用に「積読中の冊数」と「読了冊数」を計算
   const unreadCount = books.filter(
@@ -55,6 +105,111 @@ export default function HomeClient({ initialBooks, initialLogs }: HomeClientProp
     window.location.reload();
   };
 
+  const createMockRecommendation = (request: string): Recommendation | null => {
+    if (request.includes("見つからない") || request.includes("条件なし")) return null;
+    const existingBook = books.find((book) => book.status !== "finished");
+    return {
+      title: existingBook?.title ?? "夜と霧",
+      author: existingBook?.author ?? "ヴィクトール・E・フランクル",
+      reason: "今の気分に寄り添い、無理なく読み進められる一冊です。",
+      imageUrl: "/book-cover-placeholder.svg",
+      category: existingBook?.categories[0] ?? "文学",
+    };
+  };
+
+  const handleChatSubmit = async () => {
+    const request = chatInput.trim();
+    if (!request || isChatting) return;
+
+    setChatInput("");
+    setChatError(null);
+    setIsChatting(true);
+    setAgentExpression("/tundog/dog_thinking.svg");
+    setChatSessions((sessions) => sessions.map((session) => session.id === activeChatId
+      ? { ...session, title: session.title === "新しい読書相談" ? request.slice(0, 28) : session.title, recommendation: null, messages: [...session.messages, { id: Date.now(), role: "user", text: request }] }
+      : session));
+
+    await new Promise((resolve) => window.setTimeout(resolve, 650));
+    const nextRecommendation = createMockRecommendation(request);
+    setChatSessions((sessions) => sessions.map((session) => session.id === activeChatId
+      ? {
+        ...session,
+        recommendation: nextRecommendation,
+        messages: [...session.messages, {
+          id: Date.now() + 1,
+          role: "assistant",
+          text: nextRecommendation
+            ? "見つけました。こちらの一冊はいかがですか？"
+            : "条件に合う本が見つかりませんでした。気分やジャンルを少し変えて、もう一度教えてください。",
+        }],
+      }
+      : session));
+    setAgentExpression(pickExpression());
+    setIsChatting(false);
+  };
+
+  const addRecommendationToTower = async () => {
+    if (!recommendation) return;
+    try {
+      await addBook({
+        title: recommendation.title,
+        author: recommendation.author,
+        categories: [recommendation.category],
+        moodTags: ["知的好奇心"],
+        reason: recommendation.reason,
+        status: "unread",
+      });
+      setBooks((currentBooks) => [
+        ...currentBooks,
+        {
+          id: `recommended-${Date.now()}`,
+          title: recommendation.title,
+          author: recommendation.author,
+          categories: [recommendation.category],
+          moodTags: ["知的好奇心"],
+          reason: recommendation.reason,
+          status: "unread",
+          addedAt: new Date().toISOString().slice(0, 10),
+        },
+      ]);
+      setChatSessions((sessions) => sessions.map((session) => session.id === activeChatId
+        ? { ...session, recommendation: null, messages: [...session.messages, { id: Date.now(), role: "assistant", text: "積読タワーに追加しました。読みたくなったときにいつでも会いに来てください。" }] }
+        : session));
+      setAgentExpression("/tundog/dog_smile.svg");
+    } catch {
+      setChatError("積読タワーへの追加に失敗しました。時間をおいて、もう一度お試しください。");
+      setAgentExpression("/tundog/dog_worried.svg");
+    }
+  };
+
+  const addRecommendationToWishlist = () => {
+    if (!recommendation) return;
+    setWishlist((items) => items.some((item) => item.title === recommendation.title) ? items : [...items, recommendation]);
+    setChatSessions((sessions) => sessions.map((session) => session.id === activeChatId
+      ? { ...session, recommendation: null, messages: [...session.messages, { id: Date.now(), role: "assistant", text: "気になるリストに追加しました。あとでゆっくり選べます。" }] }
+      : session));
+    setAgentExpression("/tundog/dog_smile.svg");
+  };
+
+  const startNewChat = () => {
+    const newChatId = Date.now();
+    setChatSessions((sessions) => [...sessions, {
+      id: newChatId,
+      title: "新しい読書相談",
+      messages: [{ id: newChatId + 1, role: "assistant", text: "こんにちは。今日はどんな本を探していますか？" }],
+      recommendation: null,
+    }]);
+    setActiveChatId(newChatId);
+    setChatError(null);
+    setAgentExpression(pickExpression());
+  };
+
+  const selectChat = (session: ChatSession) => {
+    setActiveChatId(session.id);
+    setChatError(null);
+    setAgentExpression(pickExpression());
+  };
+
   // ５　検索バーの入力値を state で管理
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -70,7 +225,7 @@ export default function HomeClient({ initialBooks, initialLogs }: HomeClientProp
       />
 
       {/* メインコンテンツエリア */}
-      <main className={`flex-1 w-full mx-auto ${activeTab === "quick" ? "max-w-none p-0" : "max-w-5xl p-4 sm:p-6 lg:p-8"}`}>
+      <main className={`flex-1 w-full mx-auto ${activeTab === "quick" || activeTab === "ai" ? "max-w-none p-0" : "max-w-5xl p-4 sm:p-6 lg:p-8"}`}>
         {/* タブに応じた画面表示の切り替え */}
         {activeTab === "tower" && (
           <div className="font-serif text-[#3d3024]">
@@ -226,6 +381,27 @@ export default function HomeClient({ initialBooks, initialLogs }: HomeClientProp
           </div>
         )}
 
+        {activeTab === "wishlist" && (
+          <div className="font-serif text-[#3d3024]">
+            <div className="mb-6">
+              <h2 className="text-3xl font-medium">気になる本</h2>
+              <p className="mt-2 text-base text-[#93765c]">AIとの会話から保存した本を、あとで見返せます。</p>
+            </div>
+            {wishlist.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-stone-300 bg-white/50 p-10 text-center text-sm text-stone-500">気になる本はまだありません。AI相談から本を保存してみましょう。</div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {wishlist.map((book) => (
+                  <article key={book.title} className="flex gap-4 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+                    <Image src={book.imageUrl} alt="" width={80} height={112} className="h-28 w-20 rounded object-cover" />
+                    <div><h3 className="font-bold text-stone-900">{book.title}</h3><p className="mt-1 text-sm text-stone-500">{book.author}</p><p className="mt-3 text-xs leading-relaxed text-stone-600">{book.reason}</p></div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === "quick" && (
           <div>
             {recommendedBook ? (
@@ -260,7 +436,80 @@ export default function HomeClient({ initialBooks, initialLogs }: HomeClientProp
         )}
 
         {activeTab === "ai" && (
-          <div className="rounded-2xl border border-stone-200 bg-white p-8 text-center text-stone-600"><h2 className="text-xl font-bold text-stone-900">AI選書コンシェルジュ</h2><p className="mt-2 text-sm">登録外の本も相談できるチャットをここに接続します。</p>
+          <div className="relative -mx-4 -mt-4 min-h-[calc(100vh-5.75rem)] translate-x-0 overflow-hidden bg-[#fffaf4] text-[15px] text-[#3d3024] sm:-mx-6 sm:-mt-6 sm:translate-x-[80px] sm:translate-y-[10px] lg:-mx-8 lg:-mt-8">
+            <aside className="absolute inset-y-0 left-0 hidden w-64 flex-col bg-[#f8eee1] p-3 sm:flex">
+              <button type="button" onClick={startNewChat} className="mb-4 flex items-center justify-center gap-2 rounded-xl bg-[#b67340] px-3 py-2.5 text-xs font-bold text-white transition-colors hover:bg-[#985a30]">
+                <span className="text-lg leading-none">＋</span>
+                新しい読書相談
+              </button>
+              <p className="px-2 text-[11px] font-bold tracking-[0.16em] text-[#93765c]">過去の会話</p>
+              <div className="mt-3 flex-1 space-y-1 overflow-y-auto">
+                {chatSessions.filter((session) => session.id !== activeChatId).slice().reverse().map((session) => (
+                  <button key={session.id} type="button" onClick={() => selectChat(session)} className="w-full rounded-xl px-2.5 py-2.5 text-left text-xs text-[#5e4736] transition-colors hover:bg-[#efdfcb]">
+                    <span className="block truncate">{session.title}</span>
+                    <span className="mt-1 block text-xs text-[#93765c]">{session.messages.length}件のメッセージ</span>
+                  </button>
+                ))}
+                {chatSessions.length === 1 && <p className="px-2 py-4 text-xs leading-relaxed text-[#93765c]">新しい相談を始めると、ここに会話が保存されます。</p>}
+              </div>
+              <div className="mt-3 border-t border-[#eadbc8] pt-3 text-[11px] text-[#93765c]">読書履歴をもとに選書します</div>
+            </aside>
+            <section className="flex min-h-[calc(100vh-5.75rem)] flex-col sm:ml-64">
+              <header className="border-b border-[#eadbc8] bg-[#fffaf4]/95 px-4 py-3 backdrop-blur sm:px-6">
+                <div className="mx-auto flex max-w-3xl items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold tracking-[0.2em] text-[#b06a3c]">AI BOOK CONCIERGE</p>
+                    <h2 className="mt-1 text-lg font-bold">AI選書コンシェルジュ</h2>
+                  </div>
+                  <button type="button" onClick={startNewChat} className="rounded-lg px-3 py-2 text-xs font-bold text-[#985a30] hover:bg-[#f4e3d0] sm:hidden">＋ 新しい相談</button>
+                </div>
+              </header>
+              <div className="flex-1 overflow-y-auto px-4 py-5 pb-40 sm:px-6">
+                <div className="mx-auto max-w-3xl space-y-6">
+                {chatMessages.map((message) => (
+                  <div key={message.id} className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                    {message.role === "assistant" && <Image src={agentExpression} alt="" width={34} height={34} className="mt-1 h-8 w-8 object-contain" />}
+                    <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${message.role === "user" ? "bg-[#c97b3d] text-white" : "bg-white text-[#5e4736] shadow-sm"}`}>
+                      <p className="mb-1 text-[9px] font-bold opacity-60">{message.role === "user" ? "あなた" : "選書エージェント"}</p>
+                      {message.text}
+                    </div>
+                  </div>
+                ))}
+                {recommendation && (
+                  <div className="ml-11 flex max-w-2xl flex-col gap-3 rounded-2xl border border-[#e4c59f] bg-[#fff8eb] p-3 shadow-sm sm:flex-row">
+                    <Image src={recommendation.imageUrl} alt={`${recommendation.title}の書影`} width={144} height={208} className="h-48 w-full rounded-xl object-cover sm:h-52 sm:w-36" />
+                    <div className="flex flex-1 flex-col">
+                      <p className="text-xs font-bold text-[#b06a3c]">おすすめの一冊</p>
+                      <h3 className="mt-1 text-lg font-bold text-[#3d3024]">{recommendation.title}</h3>
+                      <p className="mt-1 text-sm text-[#93765c]">{recommendation.author}</p>
+                      <p className="mt-3 text-xs leading-relaxed text-[#5e4736]">{recommendation.reason}</p>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button type="button" onClick={addRecommendationToTower} className="rounded-full bg-[#b67340] px-3 py-1.5 text-[11px] font-bold text-white hover:bg-[#985a30]">積読に追加</button>
+                        <button type="button" onClick={addRecommendationToWishlist} className="rounded-full border border-[#b67340] px-3 py-1.5 text-[11px] font-bold text-[#985a30] hover:bg-[#f4e3d0]">気になるリストに追加</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {chatError && <p className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{chatError}</p>}
+                </div>
+              </div>
+              <div className="absolute inset-x-0 bottom-3 px-4 sm:ml-64 sm:px-6">
+                <div className="mx-auto max-w-3xl">
+                  <div className="flex gap-2 rounded-2xl border border-[#d7c4aa] bg-white p-1.5 shadow-lg">
+                    <textarea value={chatInput} onChange={(event) => setChatInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void handleChatSubmit(); } }} placeholder="例：最近疲れているので、短時間で読める本がほしい" rows={2} className="min-w-0 flex-1 resize-none bg-transparent px-3 py-2 text-sm text-[#3d3024] outline-none placeholder:text-stone-400" disabled={isChatting} />
+                    <button type="button" onClick={() => void handleChatSubmit()} disabled={!chatInput.trim() || isChatting} className="self-end rounded-xl bg-[#b67340] px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">{isChatting ? "考え中..." : "送信"}</button>
+                  </div>
+                  <p className="mt-1 text-right text-[10px] text-stone-400">Enterで送信・Shift+Enterで改行</p>
+                </div>
+              </div>
+            </section>
+            <div className="pointer-events-none absolute bottom-20 left-2 hidden max-h-[38vh] flex-col items-start sm:flex">
+              <div className="mb-1 ml-2 rounded-2xl rounded-bl-sm bg-white px-2.5 py-1.5 text-[11px] text-[#5e4736] shadow-sm">
+                {isChatting ? "あなたに合う本を探しています…" : "お気軽に相談してください"}
+              </div>
+              <p className="mb-0.5 ml-7 text-xs font-bold tracking-wide text-[#5e4736]">つんドック</p>
+              <Image src={agentExpression} alt="選書エージェント つんドック" width={120} height={120} className="h-24 w-24 max-h-[22vh] object-contain object-bottom sm:h-28 sm:w-28" />
+            </div>
           </div>
         )}
 

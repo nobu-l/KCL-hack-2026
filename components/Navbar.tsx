@@ -57,6 +57,10 @@ export default function Navbar({
       badge: finishedCount,
     },
     {
+      id: "wishlist",
+      label: "気になる本",
+    },
+    {
       id: "quick",
       label: "クイック診断",
     },
