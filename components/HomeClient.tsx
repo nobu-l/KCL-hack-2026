@@ -435,8 +435,8 @@ export default function HomeClient({ initialBooks, initialLogs }: HomeClientProp
           </div>
         )}
 
-        {activeTab === "ai" && (
-          <div className="relative -mx-4 -mt-4 min-h-[calc(100vh-5.75rem)] translate-x-0 overflow-hidden bg-[#fffaf4] text-[15px] text-[#3d3024] sm:-mx-6 sm:-mt-6 sm:translate-x-[80px] sm:translate-y-[10px] lg:-mx-8 lg:-mt-8">
+                {activeTab === "ai" && (
+          <div className="relative h-[calc(100dvh-5.75rem)] overflow-hidden bg-[#fffaf4] text-[15px] text-[#3d3024]">
             <aside className="absolute inset-y-0 left-0 hidden w-64 flex-col bg-[#f8eee1] p-3 sm:flex">
               <button type="button" onClick={startNewChat} className="mb-4 flex items-center justify-center gap-2 rounded-xl bg-[#b67340] px-3 py-2.5 text-xs font-bold text-white transition-colors hover:bg-[#985a30]">
                 <span className="text-lg leading-none">＋</span>
@@ -454,7 +454,7 @@ export default function HomeClient({ initialBooks, initialLogs }: HomeClientProp
               </div>
               <div className="mt-3 border-t border-[#eadbc8] pt-3 text-[11px] text-[#93765c]">読書履歴をもとに選書します</div>
             </aside>
-            <section className="flex min-h-[calc(100vh-5.75rem)] flex-col sm:ml-64">
+            <section className="flex h-full flex-col sm:ml-64">
               <header className="border-b border-[#eadbc8] bg-[#fffaf4]/95 px-4 py-3 backdrop-blur sm:px-6">
                 <div className="mx-auto flex max-w-3xl items-center justify-between">
                   <div>
