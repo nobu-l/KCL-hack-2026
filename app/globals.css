@@ -1,4 +1,15 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "筑紫Aオールド明朝", "Yu Mincho", "Hiragino Mincho ProN", serif;
+  --font-serif: "筑紫Aオールド明朝", "Yu Mincho", "Hiragino Mincho ProN", serif;
+  --font-mono: "筑紫Aオールド明朝", "Yu Mincho", "Hiragino Mincho ProN", serif;
+}
+
+body {
+  font-family: "筑紫Aオールド明朝", "Yu Mincho", "Hiragino Mincho ProN", serif;
+}
+
 .night-sky {
   position: relative;
   min-height: 100vh;

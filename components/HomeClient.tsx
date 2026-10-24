@@ -115,7 +115,115 @@ export default function HomeClient({ initialBooks, initialLogs }: HomeClientProp
         )}
 
         {activeTab === "shelf" && (
-          <div><div className="mb-6"><h2 className="text-xl font-bold text-stone-900">読了本棚</h2><p className="text-sm text-stone-600">読了した本を作者名順に並べています</p></div><div className="overflow-x-auto rounded-2xl bg-[#7a4a2e] p-5 shadow-inner"><div className="flex min-h-72 min-w-max items-end gap-3 border-b-8 border-[#4b2b1b] px-4 pb-3">{books.filter((book) => book.status === "finished").sort((a, b) => a.author.localeCompare(b.author, "ja")).map((book) => <button key={book.id} type="button" onClick={() => setSelectedShelfBook(book)} className="flex h-52 w-16 items-end justify-center rounded-t-md border-x-2 border-white/10 px-2 pb-4 text-left text-xs font-bold text-white shadow-lg transition-transform hover:-translate-y-2" style={{ backgroundColor: { amber: "#b7791f", emerald: "#276749", sky: "#2b6cb0", rose: "#9b2c2c", indigo: "#44337a", stone: "#57534e", teal: "#2c7a7b" }[book.spineColor ?? "stone"] }}><span className="[writing-mode:vertical-rl]">{book.title}</span></button>)}</div></div>{selectedShelfBook && <div className="fixed inset-0 z-40 flex items-center justify-center bg-stone-950/50 p-4" onClick={() => setSelectedShelfBook(null)}><div className="w-full max-w-md rounded-2xl bg-stone-50 p-6" onClick={(event) => event.stopPropagation()}><div className="flex justify-between gap-4"><div><p className="text-xs font-bold text-emerald-700">BOOK DETAIL</p><h3 className="mt-1 text-xl font-bold text-stone-900">{selectedShelfBook.title}</h3><p className="text-sm text-stone-500">{selectedShelfBook.author}</p></div><button type="button" onClick={() => setSelectedShelfBook(null)} aria-label="詳細を閉じる" className="text-2xl text-stone-400">×</button></div><p className="mt-5 text-sm text-stone-700">読了ログから評価と感想を確認できます。</p></div></div>}</div>
+          <div>
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-stone-900">読了本棚</h2>
+              <p className="text-sm text-stone-600">読了した本を作者名順に並べています</p>
+            </div>
+            <div className="overflow-x-auto rounded-2xl bg-[#7a4a2e] p-5 shadow-inner">
+              <div className="flex min-h-72 min-w-max items-end gap-3 border-b-8 border-[#4b2b1b] px-4 pb-3">
+                {books
+                  .filter((book) => book.status === "finished")
+                  .sort((a, b) => a.author.localeCompare(b.author, "ja"))
+                  .map((book) => (
+                    <button
+                      key={book.id}
+                      type="button"
+                      onClick={() => setSelectedShelfBook(book)}
+                      className="flex h-52 w-16 items-end justify-center rounded-t-md border-x-2 border-white/10 px-2 pb-4 text-left text-xs font-bold text-white shadow-lg transition-transform hover:-translate-y-2"
+                      style={{
+                        backgroundColor: {
+                          amber: "#b7791f",
+                          emerald: "#276749",
+                          sky: "#2b6cb0",
+                          rose: "#9b2c2c",
+                          indigo: "#44337a",
+                          stone: "#57534e",
+                          teal: "#2c7a7b",
+                        }[book.spineColor ?? "stone"],
+                      }}
+                    >
+                      <span className="[writing-mode:vertical-rl]">{book.title}</span>
+                    </button>
+                  ))}
+              </div>
+            </div>
+            {selectedShelfBook && (() => {
+              const selectedLog = logs.find((log) => log.bookId === selectedShelfBook.id);
+
+              return (
+                <div
+                  className="fixed inset-0 z-40 flex items-center justify-center bg-stone-950/50 p-4"
+                  onClick={() => setSelectedShelfBook(null)}
+                >
+                  <div
+                    className="w-full max-w-md rounded-2xl bg-stone-50 p-6"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <div className="flex justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-bold text-emerald-700">READING LOG</p>
+                        <h3 className="mt-1 text-xl font-bold text-stone-900">
+                          {selectedShelfBook.title}
+                        </h3>
+                        <p className="text-sm text-stone-500">{selectedShelfBook.author}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedShelfBook(null)}
+                        aria-label="詳細を閉じる"
+                        className="text-2xl text-stone-400"
+                      >
+                        ×
+                      </button>
+                    </div>
+
+                    {selectedLog ? (
+                      <div className="mt-5 space-y-5 text-sm text-stone-700">
+                        <div>
+                          <p className="font-semibold text-stone-500">読了日</p>
+                          <p className="mt-1">{selectedLog.finishedAt}</p>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-stone-500">評価</p>
+                          <div
+                            className="mt-1 text-2xl tracking-wide"
+                            aria-label={`${selectedLog.rating}つ星`}
+                          >
+                            {[1, 2, 3, 4, 5].map((value) => (
+                              <span
+                                key={value}
+                                className={value <= selectedLog.rating ? "text-amber-500" : "text-stone-300"}
+                              >
+                                ★
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-stone-500">感想</p>
+                          <p className="mt-1 whitespace-pre-wrap rounded-lg bg-white p-3">
+                            {selectedLog.impressions || "感想は記録されていません。"}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-5">
+                        <p className="text-sm text-stone-600">この本の読了ログはまだありません。</p>
+                        <button
+                          type="button"
+                          onClick={() => setFinishingBook(selectedShelfBook)}
+                          className="mt-4 w-full rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-800"
+                        >
+                          読了ログを追加
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
         )}
 
         {activeTab === "quick" && (
