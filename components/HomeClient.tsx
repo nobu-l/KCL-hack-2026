@@ -4,7 +4,9 @@ import Image from "next/image";
 import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import { AppTab, Book, BookRating, NewBookInput, ReadingLog } from "@/types/book";
+import type { ChatSession, ChatMessage, Recommendation } from "@/types/ai";
 import { addBook, finishBook, updateBookStatus } from "@/lib/action/book";
+import { saveChatSession, saveWishlistItem } from "@/lib/action/ai";
 import BookCard from "@/components/book_card";
 import SearchBar from "@/components/SearchBar";
 import StatusSwitch from "@/components/StatusSwitch";
@@ -16,28 +18,9 @@ import { GiftBookReveal } from "@/components/GiftBookReveal";
 interface HomeClientProps {
   initialBooks: Book[];
   initialLogs: ReadingLog[];
+  initialChatSessions: ChatSession[];
+  initialWishlist: Recommendation[];
 }
-
-type ChatMessage = {
-  id: number;
-  role: "user" | "assistant";
-  text: string;
-};
-
-type ChatSession = {
-  id: number;
-  title: string;
-  messages: ChatMessage[];
-  recommendation: Recommendation | null;
-};
-
-type Recommendation = {
-  title: string;
-  author: string;
-  reason: string;
-  imageUrl: string;
-  category: Book["categories"][number];
-};
 
 const agentExpressions = [
   "/tundog/dog_normal.svg",
@@ -50,7 +33,8 @@ const agentExpressions = [
 
 const pickExpression = () => agentExpressions[Math.floor(Math.random() * agentExpressions.length)];
 
-export default function HomeClient({ initialBooks, initialLogs }: HomeClientProps) {
+export default function HomeClient({ initialBooks, initialLogs, initialChatSessions, initialWishlist }: HomeClientProps) {
+  const defaultChatId = initialChatSessions[0]?.id ?? "local-new";
   // 1. 本のデータ一覧を state で管理
   const [books, setBooks] = useState<Book[]>(initialBooks);
   const [logs] = useState<ReadingLog[]>(initialLogs);
@@ -60,16 +44,14 @@ export default function HomeClient({ initialBooks, initialLogs }: HomeClientProp
   const [selectedShelfBook, setSelectedShelfBook] = useState<Book | null>(null);
   const [startedBook, setStartedBook] = useState<Book | null>(null);
   const [recommendedBook, setRecommendedBook] = useState<Book | null>(null);
-  const [wishlist, setWishlist] = useState<Recommendation[]>([]);
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([
-    {
-      id: 1,
-      title: "新しい読書相談",
-      messages: [{ id: 1, role: "assistant", text: "こんにちは。今日はどんな本を探していますか？気分や読書に使える時間を教えてください。" }],
-      recommendation: null,
-    },
-  ]);
-  const [activeChatId, setActiveChatId] = useState(1);
+  const [wishlist, setWishlist] = useState<Recommendation[]>(initialWishlist);
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>(initialChatSessions.length > 0 ? initialChatSessions : [{
+    id: defaultChatId,
+    title: "新しい読書相談",
+    messages: [{ id: `welcome-${defaultChatId}`, role: "assistant", text: "こんにちは。今日はどんな本を探していますか？気分や読書に使える時間を教えてください。" }],
+    recommendation: null,
+  }]);
+  const [activeChatId, setActiveChatId] = useState(defaultChatId);
   const [chatInput, setChatInput] = useState("");
   const [isChatting, setIsChatting] = useState(false);
   const [agentExpression, setAgentExpression] = useState(agentExpressions[0]);
@@ -110,15 +92,25 @@ export default function HomeClient({ initialBooks, initialLogs }: HomeClientProp
     if (!request || isChatting) return;
 
     const chatId = activeChatId;
+    const currentSession = chatSessions.find((session) => session.id === chatId);
+    if (!currentSession) return;
+    const userMessage: ChatMessage = { id: `${Date.now()}-user`, role: "user", text: request };
+    const sessionWithUserMessage: ChatSession = {
+      ...currentSession,
+      title: currentSession.title === "新しい読書相談" ? request.slice(0, 28) : currentSession.title,
+      recommendation: null,
+      messages: [...currentSession.messages, userMessage],
+    };
     setChatInput("");
     setChatError(null);
     setIsChatting(true);
     setAgentExpression("/tundog/dog_thinking.svg");
     setChatSessions((sessions) => sessions.map((session) => session.id === chatId
-      ? { ...session, title: session.title === "新しい読書相談" ? request.slice(0, 28) : session.title, recommendation: null, messages: [...session.messages, { id: Date.now(), role: "user", text: request }] }
+      ? sessionWithUserMessage
       : session));
 
     try {
+      await saveChatSession(sessionWithUserMessage);
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -134,17 +126,17 @@ export default function HomeClient({ initialBooks, initialLogs }: HomeClientProp
         throw new Error("AIから有効な返答を受け取れませんでした。");
       }
 
-      setChatSessions((sessions) => sessions.map((session) => session.id === chatId
-        ? {
-          ...session,
-          recommendation: result.recommendation ?? null,
-          messages: [...session.messages, {
-            id: Date.now(),
+      const completedSession: ChatSession = {
+        ...sessionWithUserMessage,
+        recommendation: result.recommendation ?? null,
+        messages: [...sessionWithUserMessage.messages, {
+            id: `${Date.now()}-assistant`,
             role: "assistant",
             text: result.reply as string,
           }],
-        }
-        : session));
+      };
+      await saveChatSession(completedSession);
+      setChatSessions((sessions) => sessions.map((session) => session.id === chatId ? completedSession : session));
       setAgentExpression(pickExpression());
     } catch (error) {
       const message = error instanceof Error ? error.message : "AI選書の処理に失敗しました。";
@@ -179,9 +171,16 @@ export default function HomeClient({ initialBooks, initialLogs }: HomeClientProp
           addedAt: new Date().toISOString().slice(0, 10),
         },
       ]);
-      setChatSessions((sessions) => sessions.map((session) => session.id === activeChatId
-        ? { ...session, recommendation: null, messages: [...session.messages, { id: Date.now(), role: "assistant", text: "積読タワーに追加しました。読みたくなったときにいつでも会いに来てください。" }] }
-        : session));
+      const session = chatSessions.find((item) => item.id === activeChatId);
+      if (session) {
+        const updatedSession: ChatSession = {
+          ...session,
+          recommendation: null,
+          messages: [...session.messages, { id: `${Date.now()}-tower`, role: "assistant", text: "積読タワーに追加しました。読みたくなったときにいつでも会いに来てください。" }],
+        };
+        await saveChatSession(updatedSession);
+        setChatSessions((sessions) => sessions.map((item) => item.id === activeChatId ? updatedSession : item));
+      }
       setAgentExpression("/tundog/dog_smile.svg");
     } catch {
       setChatError("積読タワーへの追加に失敗しました。時間をおいて、もう一度お試しください。");
@@ -189,26 +188,47 @@ export default function HomeClient({ initialBooks, initialLogs }: HomeClientProp
     }
   };
 
-  const addRecommendationToWishlist = () => {
+  const addRecommendationToWishlist = async () => {
     if (!recommendation) return;
-    setWishlist((items) => items.some((item) => item.title === recommendation.title) ? items : [...items, recommendation]);
-    setChatSessions((sessions) => sessions.map((session) => session.id === activeChatId
-      ? { ...session, recommendation: null, messages: [...session.messages, { id: Date.now(), role: "assistant", text: "気になるリストに追加しました。あとでゆっくり選べます。" }] }
-      : session));
-    setAgentExpression("/tundog/dog_smile.svg");
+    try {
+      await saveWishlistItem(recommendation);
+      setWishlist((items) => items.some((item) => item.title === recommendation.title && item.author === recommendation.author) ? items : [...items, recommendation]);
+      const session = chatSessions.find((item) => item.id === activeChatId);
+      if (session) {
+        const updatedSession: ChatSession = {
+          ...session,
+          recommendation: null,
+          messages: [...session.messages, { id: `${Date.now()}-wishlist`, role: "assistant", text: "気になるリストに追加しました。あとでゆっくり選べます。" }],
+        };
+        await saveChatSession(updatedSession);
+        setChatSessions((sessions) => sessions.map((item) => item.id === activeChatId ? updatedSession : item));
+      }
+      setAgentExpression("/tundog/dog_smile.svg");
+    } catch (error) {
+      console.error("気になる本の保存に失敗しました。", error);
+      setChatError("気になるリストへの保存に失敗しました。時間をおいて、もう一度お試しください。");
+      setAgentExpression("/tundog/dog_worried.svg");
+    }
   };
 
-  const startNewChat = () => {
-    const newChatId = Date.now();
-    setChatSessions((sessions) => [...sessions, {
+  const startNewChat = async () => {
+    const newChatId = `${Date.now()}`;
+    const newSession: ChatSession = {
       id: newChatId,
       title: "新しい読書相談",
-      messages: [{ id: newChatId + 1, role: "assistant", text: "こんにちは。今日はどんな本を探していますか？" }],
+      messages: [{ id: `${newChatId}-welcome`, role: "assistant", text: "こんにちは。今日はどんな本を探していますか？" }],
       recommendation: null,
-    }]);
-    setActiveChatId(newChatId);
-    setChatError(null);
-    setAgentExpression(pickExpression());
+    };
+    try {
+      await saveChatSession(newSession);
+      setChatSessions((sessions) => [...sessions, newSession]);
+      setActiveChatId(newChatId);
+      setChatError(null);
+      setAgentExpression(pickExpression());
+    } catch (error) {
+      console.error("新しい会話の保存に失敗しました。", error);
+      setChatError("新しい会話を保存できませんでした。時間をおいて、もう一度お試しください。");
+    }
   };
 
   const selectChat = (session: ChatSession) => {
