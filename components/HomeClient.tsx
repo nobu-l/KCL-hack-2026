@@ -361,8 +361,7 @@ export default function HomeClient({ initialBooks, initialLogs, initialChatSessi
                       </button>
                       /*本を削除するボタン*/
                       <button>
-                        <span aria-label="本を削除" className="bg-red-500 text-white rounded-full p-2">
-                          削除
+                        <span aria-label="本を削除" className="bg-red-500 text-white rounded-full p-2 hover:bg-red-600 cursor-pointer transition duration-200 ease-in-out">
                         </span>
                       </button>
                     </div>
