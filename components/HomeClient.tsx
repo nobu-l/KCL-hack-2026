@@ -323,7 +323,7 @@ export default function HomeClient({ initialBooks, initialLogs, initialChatSessi
                           indigo: "#44337a",
                           stone: "#57534e",
                           teal: "#2c7a7b",
-                        }[book.spineColor ?? "stone"],
+                        }[book.spineColor ?? "amber"],
                       }}
                     >
                       <span className="[writing-mode:vertical-rl]">{book.title}</span>
@@ -358,6 +358,12 @@ export default function HomeClient({ initialBooks, initialLogs, initialChatSessi
                         className="text-2xl text-stone-400"
                       >
                         ×
+                      </button>
+                      /*本を削除するボタン*/
+                      <button>
+                        <span aria-label="本を削除" className="bg-red-500 text-white rounded-full p-2">
+                          削除
+                        </span>
                       </button>
                     </div>
 
