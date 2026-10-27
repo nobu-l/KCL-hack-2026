@@ -18,7 +18,6 @@ export default function SearchBar({
     <div className="relative w-full">
       {/* 検索アイコン（装飾） */}
       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm pointer-events-none">
-        🔍
       </span>
 
       <input

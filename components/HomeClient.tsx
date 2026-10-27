@@ -57,6 +57,7 @@ export default function HomeClient({ initialBooks, initialLogs, initialChatSessi
   const [agentExpression, setAgentExpression] = useState(agentExpressions[0]);
   const [chatError, setChatError] = useState<string | null>(null);
   const [now] = useState(() => Date.now());
+  const [selectedStatsMonth, setSelectedStatsMonth] = useState<string | null>(null);
 
   // 2. 現在選択されているタブ（"tower" | "shelf" | "logs" | "ai"）を state で管理
   const [activeTab, setActiveTab] = useState<AppTab>("tower");
@@ -458,7 +459,59 @@ export default function HomeClient({ initialBooks, initialLogs, initialChatSessi
         )}
 
         {activeTab === "stats" && (
-          <div><div className="mb-6"><h2 className="text-xl font-bold text-stone-900">読書統計</h2><p className="text-sm text-stone-600">読了ログから見る、最近5ヶ月の読書量</p></div><div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm"><div className="flex h-64 items-end justify-around gap-3 border-b border-stone-200 px-2">{Array.from({ length: 5 }, (_, index) => { const date = new Date(); date.setMonth(date.getMonth() - (4 - index)); const count = logs.filter((log) => { const finished = new Date(log.finishedAt); return finished.getFullYear() === date.getFullYear() && finished.getMonth() === date.getMonth(); }).length; return <div key={date.toISOString()} className="flex h-full flex-1 flex-col items-center justify-end gap-2"><span className="text-sm font-bold text-stone-700">{count}冊</span><div className="w-full max-w-16 rounded-t-lg bg-amber-500 transition-all" style={{ height: `${Math.max(count * 32, 8)}px` }} /><span className="text-xs text-stone-500">{date.getMonth() + 1}月</span></div>; })}</div></div>
+          <div>
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-stone-900">読書統計</h2>
+              <p className="text-sm text-stone-600">読了ログから見る、最近5ヶ月の読書量</p>
+            </div>
+            <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+              <div className="flex h-64 items-end justify-around gap-3 border-b border-stone-200 px-2">
+                {Array.from({ length: 5 }, (_, index) => {
+                  const date = new Date();
+                  date.setMonth(date.getMonth() - (4 - index));
+                  const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+                  const monthLogs = logs.filter((log) => {
+                    const finished = new Date(log.finishedAt);
+                    return finished.getFullYear() === date.getFullYear() && finished.getMonth() === date.getMonth();
+                  });
+                  const isSelected = selectedStatsMonth === monthKey;
+
+                  return (
+                    <button
+                      key={monthKey}
+                      type="button"
+                      aria-label={`${date.getMonth() + 1}月の読了本を表示`}
+                      aria-pressed={isSelected}
+                      onClick={() => setSelectedStatsMonth(monthKey)}
+                      className="flex h-full flex-1 flex-col items-center justify-end gap-2 rounded-t-lg px-1 hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-600"
+                    >
+                      <span className="text-sm font-bold text-stone-700">{monthLogs.length}冊</span>
+                      <span
+                        className={`block w-full max-w-16 rounded-t-lg transition-all ${isSelected ? "bg-amber-700" : "bg-amber-500"}`}
+                        style={{ height: `${Math.max(monthLogs.length * 32, 8)}px` }}
+                      />
+                      <span className="text-xs text-stone-500">{date.getMonth() + 1}月</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {selectedStatsMonth && (
+                <div className="mt-5 border-t border-stone-200 pt-4">
+                  <h3 className="mb-3 text-sm font-bold text-stone-700">
+                    {Number(selectedStatsMonth.slice(5))}月に読んだ本
+                  </h3>
+                  <ul className="space-y-2">
+                    {logs
+                      .filter((log) => log.finishedAt.startsWith(selectedStatsMonth))
+                      .map((log) => (
+                        <li key={log.id} className="rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-800">
+                          {log.bookTitle}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
