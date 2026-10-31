@@ -358,11 +358,13 @@ export default function HomeClient({ initialBooks, initialLogs, initialChatSessi
                         className="text-2xl text-stone-400"
                       >
                         ×
-                      </button>
-                      /*本を削除するボタン*/
-                      <button>
-                        <span aria-label="本を削除" className="bg-red-500 text-white rounded-full p-2 hover:bg-red-600 cursor-pointer transition duration-200 ease-in-out">
-                        </span>
+
+                      </button >
+                      {/* 本を削除するボタン */}
+                      <button 
+                      aria-label="本を削除" 
+                      className="bg-red-500 text-white rounded-full p-2 hover:bg-red-600 cursor-pointer transition duration-200 ease-in-out">
+                        ×
                       </button>
                     </div>
 
@@ -451,11 +453,17 @@ export default function HomeClient({ initialBooks, initialLogs, initialChatSessi
               />
             ) : (
               <MoodPicker
-                books={books.filter((book) => book.status !== "finished").map(({ title, author }) => ({ title, author }))}
+                books={books.filter((book) => book.status !== "finished")}
                 moodTags={["30分でサクッと", "じっくり没頭", "モチベUP", "知的好奇心", "気分転換", "感動・泣ける", "教養・スキルアップ"]}
                 onNext={(selectedTags) => {
                   const candidate = books.find((book) => book.status !== "finished" && selectedTags.some((tag) => book.moodTags.includes(tag as never)));
                   if (candidate) setRecommendedBook(candidate);
+                }}
+                onPickOldest={() => {
+                  const oldestBook = books
+                    .filter((book) => book.status !== "finished")
+                    .sort((a, b) => new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime())[0];
+                  if (oldestBook) setRecommendedBook(oldestBook);
                 }}
               />
             )}

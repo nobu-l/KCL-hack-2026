@@ -14,12 +14,13 @@ type FloatingItem = {
 };
 
 type MoodPickerProps = {
-  books: Book[];
+  books: (Book & { addedAt: string })[];
   moodTags: string[];
   onNext: (selectedTags: string[]) => void;
+  onPickOldest: () => void;
 };
 
-export function MoodPicker({ books, moodTags, onNext }: MoodPickerProps) {
+export function MoodPicker({ books, moodTags, onNext, onPickOldest }: MoodPickerProps) {
   const [floaters, setFloaters] = useState<FloatingItem[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const nextId = useRef(0);
@@ -114,6 +115,19 @@ export function MoodPicker({ books, moodTags, onNext }: MoodPickerProps) {
             >
               次へ進む
             </button>
+            <div className="my-5 flex items-center justify-center gap-3 font-sans text-[11px] text-[#93765c]">
+              <span className="h-px w-8 bg-[#3d3024]/15" />
+              <span>または</span>
+              <span className="h-px w-8 bg-[#3d3024]/15" />
+            </div>
+            <button
+              type="button"
+              onClick={onPickOldest}
+              className="rounded-full border border-[#b5651d]/50 bg-[#b5651d]/[0.06] px-6 py-[10px] font-sans text-sm text-[#8f4e18] transition-colors hover:border-[#b5651d] hover:bg-[#b5651d]/[0.14]"
+            >
+              積ん読期間の長い本を選ぶ
+            </button>
+            <p className="mt-2 font-sans text-[11px] text-[#93765c]">いちばん長く待っている本を、今日の一冊に</p>
           </>
         )}
       </div>
